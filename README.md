@@ -1,4 +1,4 @@
-Olá! 👋 Bem-vindo ao meu perfil no GitHub!
+#Olá! 👋 Bem-vindo ao meu perfil no GitHub!
 
 Eu sou Thiago Mariano, um desenvolvedor entusiasta com paixão por tecnologia, inovação e soluções criativas. Sempre em busca de aprender novas habilidades e construir projetos que possam impactar positivamente o mundo digital.
 🚀 O que eu faço:
