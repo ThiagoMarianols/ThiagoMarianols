@@ -1,0 +1,74 @@
+name: Update profile
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 */12 * * *"
+
+concurrency:
+  group: update-profile
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate github-contribution-grid-snake.svg
+        uses: Platane/snk/svg-only@v3
+        with:
+          github_user_name: ${{ github.repository_owner }}
+          outputs: |
+            dist/github-contribution-grid-snake.svg
+            dist/github-contribution-grid-snake-dark.svg?palette=github-dark
+
+      - name: Apply vibrant green palette to snake dark SVG
+        run: |
+          sed -i -E 's/--c1:[^;}]+/--c1:#0e4429/; s/--c2:[^;}]+/--c2:#006d32/; s/--c3:[^;}]+/--c3:#26a641/; s/--c4:[^;}]+/--c4:#00e65b/' dist/github-contribution-grid-snake-dark.svg
+
+      - name: Deploy snake SVGs to output branch
+        uses: crazy-max/ghaction-github-pages@v3.1.0
+        with:
+          target_branch: output
+          build_dir: dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate 3D contribution graph
+        uses: yoshi389111/github-profile-3d-contrib@0.7.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USERNAME: ${{ github.repository_owner }}
+          SETTING_JSON: conf/github-profile-3d-contrib.json
+
+      - name: Apply green color to Python in 3D SVGs
+        run: |
+          sed -i 's/#3572A5/#3fb950/gi' profile-3d-contrib/*.svg
+
+      - name: Push 3D SVGs to output-3d-contrib branch
+        uses: crazy-max/ghaction-github-pages@v3
+        with:
+          target_branch: output-3d-contrib
+          build_dir: profile-3d-contrib
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit updated SVGs to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/github-contribution-grid-snake.svg dist/github-contribution-grid-snake-dark.svg profile-3d-contrib/day.svg profile-3d-contrib/night.svg
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update profile SVGs [skip ci]"
+            git push
+          fi
